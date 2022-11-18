@@ -1,0 +1,99 @@
+info(
+	title: "quantum-matrix"
+	desc: "量子 矩阵 计算模块"
+	author: "Euraxluo"
+	email: "euraxluo@outlook.com"
+	version: "0.0.1"
+)
+type (
+	DistanceMatrix {
+		Points     [][]float32 `json:"points"`
+		Coordinate string      `json:"coordinate,optional"`
+		TripMethod int         `json:"method,optional"`
+		Speed      int         `json:"speed,optional"`
+		Strategy   int         `json:"strategy,optional"`
+		TimeSlot   string      `json:"timeslot,optional"`
+		Sdk        string      `json:"sdk,optional"`
+	}
+	WaypointsRoute {
+		Points     [][]float32 `json:"points"`
+		Coordinate string      `json:"coordinate,optional"`
+		TripMethod int         `json:"method,optional"`
+		Speed      int         `json:"speed,optional"`
+		Strategy   int         `json:"strategy,optional"`
+		TimeSlot   string      `json:"timeslot,optional"`
+		Sdk        string      `json:"sdk,optional"`
+	}
+	Route {
+		// Code  状态码
+		Code int `json:"code"`
+		// Message  状态码对应的信息
+		Message string `json:"message"`
+		// Waypoint  途径点，包括起点和终点
+		Waypoint [][]float32 `json:"waypoint"`
+		// Routes  状态码
+		Routes interface{} `json:"routes"`
+	}
+	Edge {
+		I int `json:"i"`
+		J int `json:"j"`
+		// origin  起点
+		Origin interface{} `json:"origin"`
+		// Destination  终点
+		Destination interface{} `json:"destination"`
+		// Duration  该分段的时间
+		Duration float32 `json:"duration"`
+		// Distance  该分段的距离
+		Distance float32 `json:"distance"`
+		// Polyline  该分段点坐标序列
+		Polyline [][]float32 `json:"polyline"`
+		// Speed  该分段的平均速度
+		Speed float32 `json:"speed"`
+	}
+	Options {
+		//  Open 是否开启
+		Open bool `json:"open"`
+		//  Priority 优先级
+		Priority int `json:"priority"`
+		//  策略 列表
+		Strategy map[int]interface{} `json:"strategy"`
+		// Method 出行方式
+		Method map[int]interface{} `json:"method"`
+		//  详细的配置
+		Option map[string]interface{} `json:"option"`
+	}
+	ServiceListResponse {
+		Code int                `json:"code"`
+		Msg  string             `json:"msg"`
+		Data map[string]Options `json:"data,omitempty"`
+	}
+	DistanceMatrixResponse {
+		Code int    `json:"code"`
+		Msg  string `json:"msg"`
+		Data []Edge `json:"data,omitempty"`
+	}
+	WaypointsRouteResponse {
+		Code int         `json:"code"`
+		Msg  string      `json:"msg"`
+		Data interface{} `json:"data,omitempty"`
+	}
+)
+service matrix {
+	@doc(
+		summary: "距离矩阵"
+	)
+	@handler matrix
+	post /api/matrix (DistanceMatrix) returns (DistanceMatrixResponse)
+	
+	@doc(
+		summary: "途径点路由"
+	)
+	@handler route
+	post /api/route (WaypointsRoute) returns (WaypointsRouteResponse)
+	
+	@doc(
+		summary: "获取提供服务的sdk列表"
+	)
+	@handler sdks
+	get /api/sdks returns (ServiceListResponse)
+}

@@ -1,0 +1,311 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "quantum-matrix",
+    "description": "北辰 矩阵 计算模块",
+    "version": "0.0.1"
+  },
+  "schemes": [
+    "http",
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/matrix": {
+      "post": {
+        "summary": "距离矩阵",
+        "operationId": "matrix",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/[]Edge"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/DistanceMatrix"
+            }
+          }
+        ],
+        "requestBody": {},
+        "tags": [
+          "matrix"
+        ]
+      }
+    },
+    "/api/route": {
+      "post": {
+        "summary": "途径点路由",
+        "operationId": "route",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/WaypointsRouteResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WaypointsRoute"
+            }
+          }
+        ],
+        "requestBody": {},
+        "tags": [
+          "matrix"
+        ]
+      }
+    },
+    "/api/sdks": {
+      "get": {
+        "summary": "获取提供服务的sdk列表",
+        "operationId": "sdks",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/ServiceListResponse"
+            }
+          }
+        },
+        "requestBody": {},
+        "tags": [
+          "matrix"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "DistanceMatrix": {
+      "type": "object",
+      "properties": {
+        "points": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/[]float32"
+          }
+        },
+        "coordinate": {
+          "type": "string"
+        },
+        "method": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "speed": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "strategy": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "timeslot": {
+          "type": "string"
+        },
+        "sdk": {
+          "type": "string"
+        }
+      },
+      "title": "DistanceMatrix",
+      "required": [
+        "points",
+        "coordinate",
+        "method",
+        "speed",
+        "strategy",
+        "timeslot",
+        "sdk"
+      ]
+    },
+    "Edge": {
+      "type": "object",
+      "properties": {
+        "i": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "j": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "origin": {
+          "type": "object"
+        },
+        "destination": {
+          "type": "object"
+        },
+        "duration": {
+          "type": "number",
+          "format": "float"
+        },
+        "distance": {
+          "type": "number",
+          "format": "float"
+        },
+        "polyline": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/[]float32"
+          }
+        },
+        "speed": {
+          "type": "number",
+          "format": "float"
+        }
+      },
+      "title": "Edge",
+      "required": [
+        "i",
+        "j",
+        "origin",
+        "destination",
+        "duration",
+        "distance",
+        "polyline",
+        "speed"
+      ]
+    },
+    "Options": {
+      "type": "object",
+      "properties": {
+        "open": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "priority": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "strategy": {
+          "$ref": "#/definitions/mapintinterface"
+        },
+        "method": {
+          "$ref": "#/definitions/mapintinterface"
+        },
+        "option": {
+          "$ref": "#/definitions/mapstringinterface"
+        }
+      },
+      "title": "Options",
+      "required": [
+        "open",
+        "priority",
+        "strategy",
+        "method",
+        "option"
+      ]
+    },
+    "ServiceListResponse": {
+      "type": "object",
+      "properties": {
+        "sdk": {
+          "$ref": "#/definitions/mapstringOptions"
+        }
+      },
+      "title": "ServiceListResponse",
+      "required": [
+        "sdk"
+      ]
+    },
+    "WaypointsRoute": {
+      "type": "object",
+      "properties": {
+        "points": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/[]float32"
+          }
+        },
+        "coordinate": {
+          "type": "string"
+        },
+        "method": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "speed": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "strategy": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "timeslot": {
+          "type": "string"
+        },
+        "sdk": {
+          "type": "string"
+        }
+      },
+      "title": "WaypointsRoute",
+      "required": [
+        "points",
+        "coordinate",
+        "method",
+        "speed",
+        "strategy",
+        "timeslot",
+        "sdk"
+      ]
+    },
+    "WaypointsRouteResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "waypoint": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/[]float32"
+          }
+        },
+        "routes": {
+          "type": "object"
+        }
+      },
+      "title": "WaypointsRouteResponse",
+      "required": [
+        "code",
+        "message",
+        "waypoint",
+        "routes"
+      ]
+    }
+  },
+  "securityDefinitions": {
+    "apiKey": {
+      "type": "apiKey",
+      "description": "Enter JWT Bearer token **_only_**",
+      "name": "Authorization",
+      "in": "header"
+    }
+  },
+  "security": [
+    {
+      "apiKey": []
+    }
+  ]
+}
