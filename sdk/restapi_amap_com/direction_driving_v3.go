@@ -42,6 +42,7 @@ func DirectionDrivingV3(s *SDK, strategy string, speed int, waypoints ...[2]floa
 		nx := make([][2]float32, 0, len(x))
 		nx = append(nx, x...)
 		routeRunner.Run(i, func() *sdk.LocationRouteServiceSchema {
+			logx.Errorf("go routing %#v", i)
 			//  对url进行请求
 			if resp, err := sdk.LogRequest(path, queryParams, nil, s.opt.Debug, s.httpClient.Do, http.MethodPost)(); err == nil && resp.StatusCode == 200 {
 				var v Response

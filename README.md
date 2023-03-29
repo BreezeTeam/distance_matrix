@@ -68,3 +68,9 @@ swagger_windows_amd64.exe serve -F=swagger openapi.json --port 8888 --host 0.0.0
 
 curl -X POST --location "http://pro-quantum-matrix:8888/api/route"  -H "Content-Type: application/json"  -d "{ \"coordinate\":\"gcj02\", \"points\":[ [116.223, 39.9057], [116.1747, 39.9437], [116.223, 39.9057], [116.1747, 39.9437] ] }"
 ```
+
+
+## TODO
+1. graphQL 按需请求
+2. 接入kv/高速缓存
+3. 存储历史请求，按照time slot 存储和管理历史数据

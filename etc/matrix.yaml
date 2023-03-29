@@ -15,7 +15,7 @@ Log:
 SDK:
   restapi_amap_com:
     Open: true
-    Debug: true
+    Debug: false
     Priority: 1
     BasePath: http://restapi.amap.com
     Output: json
@@ -23,10 +23,10 @@ SDK:
     Key: 9e12a1bc441fef432e9e461632746ba2,c70e3ecbb3a1a7247fa01885c9b9187c,4396fb03833e27e6438dde36c7457cf3
     Strategy: 1
     Method: 0
-    KeepAlive: 30
-    Timeout: 500
-    MaxIdleConns: 100
-    IdleConnTimeout: 90
+    KeepAlive: 2
+    Timeout: 2
+    MaxIdleConns: 200
+    IdleConnTimeout: 2
   distance:
     Priority: 0
     Open: true
