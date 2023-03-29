@@ -1,6 +1,6 @@
 info(
-	title: "quantum-matrix"
-	desc: "量子 矩阵 计算模块"
+	title: "distance-matrix"
+	desc: "距离 矩阵 计算模块"
 	author: "Euraxluo"
 	email: "euraxluo@outlook.com"
 	version: "0.0.1"

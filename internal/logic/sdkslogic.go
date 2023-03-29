@@ -2,13 +2,13 @@ package logic
 
 import (
 	"context"
+	"distance-matrix/common"
+	"distance-matrix/sdk"
 	"github.com/the-go-tool/cast"
-	"quantum-matrix/common"
-	"quantum-matrix/sdk"
 	"reflect"
 
-	"quantum-matrix/internal/svc"
-	"quantum-matrix/internal/types"
+	"distance-matrix/internal/svc"
+	"distance-matrix/internal/types"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )

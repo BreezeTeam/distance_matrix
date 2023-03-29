@@ -15,7 +15,7 @@ Log:
 SDK:
   restapi_amap_com:
     Open: true
-    Debug: false
+    Debug: true
     Priority: 1
     BasePath: http://restapi.amap.com
     Output: json

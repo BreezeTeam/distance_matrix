@@ -3,10 +3,10 @@
 package common
 
 import (
+	"distance-matrix/sdk"
+	_ "distance-matrix/sdk/base"
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/core/logx"
-	"quantum-matrix/sdk"
-	_ "quantum-matrix/sdk/base"
 )
 
 // ServiceConfig  此处为服务配置，和api 无关

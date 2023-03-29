@@ -2,11 +2,11 @@ package logic
 
 import (
 	"context"
-	sdk "quantum-matrix/sdk"
+	sdk "distance-matrix/sdk"
 	"reflect"
 
-	"quantum-matrix/internal/svc"
-	"quantum-matrix/internal/types"
+	"distance-matrix/internal/svc"
+	"distance-matrix/internal/types"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )

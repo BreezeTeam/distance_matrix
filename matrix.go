@@ -4,9 +4,9 @@ import (
 	"flag"
 	"fmt"
 
-	"quantum-matrix/internal/config"
-	"quantum-matrix/internal/handler"
-	"quantum-matrix/internal/svc"
+	"distance-matrix/internal/config"
+	"distance-matrix/internal/handler"
+	"distance-matrix/internal/svc"
 
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/rest"

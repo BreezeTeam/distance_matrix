@@ -3,10 +3,10 @@ package handler
 import (
 	"net/http"
 
+	"distance-matrix/internal/logic"
+	"distance-matrix/internal/svc"
+	"distance-matrix/internal/types"
 	"github.com/zeromicro/go-zero/rest/httpx"
-	"quantum-matrix/internal/logic"
-	"quantum-matrix/internal/svc"
-	"quantum-matrix/internal/types"
 )
 
 func routeHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {

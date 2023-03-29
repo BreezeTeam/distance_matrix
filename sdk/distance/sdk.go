@@ -1,9 +1,9 @@
 package distance
 
 import (
+	"distance-matrix/sdk"
 	"github.com/zeromicro/go-zero/core/logx"
 	"path"
-	"quantum-matrix/sdk"
 	"reflect"
 )
 

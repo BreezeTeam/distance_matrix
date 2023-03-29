@@ -4,7 +4,7 @@ package handler
 import (
 	"net/http"
 
-	"quantum-matrix/internal/svc"
+	"distance-matrix/internal/svc"
 
 	"github.com/zeromicro/go-zero/rest"
 )

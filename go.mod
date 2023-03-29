@@ -1,4 +1,4 @@
-module quantum-matrix
+module distance-matrix
 
 go 1.18
 

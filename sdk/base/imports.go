@@ -3,6 +3,6 @@
 package base
 
 import (
-	_ "quantum-matrix/sdk/distance"
-	_ "quantum-matrix/sdk/restapi_amap_com"
+	_ "distance-matrix/sdk/distance"
+	_ "distance-matrix/sdk/restapi_amap_com"
 )

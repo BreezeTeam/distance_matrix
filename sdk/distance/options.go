@@ -1,7 +1,7 @@
 package distance
 
 import (
-	"quantum-matrix/sdk"
+	"distance-matrix/sdk"
 )
 
 type CalcOpt struct {

@@ -1,7 +1,7 @@
 package svc
 
 import (
-	"quantum-matrix/internal/config"
+	"distance-matrix/internal/config"
 )
 
 type ServiceContext struct {
