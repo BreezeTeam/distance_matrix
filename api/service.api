@@ -1,0 +1,82 @@
+syntax = "v1"
+
+info (
+	title:   "Distance Matrix API"
+	desc:    "OD distance/time matrix service"
+	author:  "matrix"
+	version: "v1"
+)
+
+type (
+	MatrixRequest {
+		Points     [][]float32 `json:"points"`
+		Coordinate string      `json:"coordinate,optional"`
+		Strategy   int         `json:"strategy,optional"`
+		Method     int         `json:"method,optional"`
+		TimeSlot   string      `json:"timeslot,optional"`
+		Strict     bool        `json:"strict,optional"`
+		GeoWideM   int         `json:"geo_wide_m,optional"`
+		Provider   string      `json:"provider,optional"`
+		SpeedMPS   int         `json:"speed_mps,optional"`
+	}
+	MatrixData {
+		Distances [][]float32 `json:"distances"`
+		Durations [][]float32 `json:"durations"`
+	}
+	MatrixResponse {
+		Code int         `json:"code"`
+		Msg  string      `json:"msg"`
+		Data *MatrixData `json:"data,omitempty"`
+	}
+	RouteRequest {
+		Points     [][]float32 `json:"points"`
+		Coordinate string      `json:"coordinate,optional"`
+		Strategy   int         `json:"strategy,optional"`
+		Method     int         `json:"method,optional"`
+		Provider   string      `json:"provider,optional"`
+		SpeedMPS   int         `json:"speed_mps,optional"`
+	}
+	RouteStep {
+		Origin      []float32 `json:"origin"`
+		Destination []float32 `json:"destination"`
+		Distance    float32   `json:"distance"`
+		Duration    float32   `json:"duration"`
+	}
+	RouteData {
+		Distance float32     `json:"distance"`
+		Duration float32     `json:"duration"`
+		Steps    []RouteStep `json:"steps"`
+	}
+	RouteResponse {
+		Code int        `json:"code"`
+		Msg  string     `json:"msg"`
+		Data *RouteData `json:"data,omitempty"`
+	}
+	ProvidersResponse {
+		Code int      `json:"code"`
+		Msg  string   `json:"msg"`
+		Data []string `json:"data,omitempty"`
+	}
+	ErrorResponse {
+		Code int    `json:"code"`
+		Msg  string `json:"msg"`
+	}
+)
+
+@server (
+	group: handler
+)
+service matrix {
+	@handler matrix
+	post /v1/matrix (MatrixRequest) returns (MatrixResponse)
+
+	@handler route
+	post /v1/route (RouteRequest) returns (RouteResponse)
+
+	@handler providers
+	get /v1/providers returns (ProvidersResponse)
+}
+
+// Health endpoints (plain text, registered manually in routes.go)
+// GET /health/live  → 200 "ok"
+// GET /health/ready → 200 "ready" | 503 "not ready"

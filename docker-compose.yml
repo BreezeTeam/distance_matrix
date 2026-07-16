@@ -1,0 +1,16 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+  matrix:
+    build: .
+    ports:
+      - "8888:8888"
+    depends_on:
+      - redis
+    environment:
+      - TZ=Asia/Shanghai
+    command: ["./matrix", "-f", "etc/matrix.yaml"]
+    volumes:
+      - ./etc/matrix.yaml:/app/etc/matrix.yaml:ro

@@ -1,0 +1,23 @@
+Name: matrix-e2e
+Host: 127.0.0.1
+Port: 0
+Timeout: 10000
+Log:
+  Mode: console
+  Level: error
+Redis:
+  Enabled: true
+  Addr: 127.0.0.1:6379
+  Prefix: distance_matrix_e2e
+  EdgeTTL: 3600
+Engine:
+  DefaultGeoWideM: 200
+  MaxPoints: 100
+  TenantQPS: 100
+Providers:
+  amap:
+    Enabled: true
+    Keys: "e2e-local-placeholder"
+    BaseURL: http://restapi.amap.com
+    BatchSize: 12
+    TimeoutSec: 2

@@ -12,24 +12,28 @@ Log:
   Compress: true
   KeepDays: 7
   StackCooldownMillis: 100
-SDK:
-  restapi_amap_com:
-    Open: true
-    Debug: false
-    Priority: 1
-    BasePath: http://restapi.amap.com
-    Output: json
-    Batch: 16
-    Key: 9e12a1bc441fef432e9e461632746ba2,c70e3ecbb3a1a7247fa01885c9b9187c,4396fb03833e27e6438dde36c7457cf3
-    Strategy: 1
-    Method: 0
-    KeepAlive: 2
-    Timeout: 2
-    MaxIdleConns: 200
-    IdleConnTimeout: 2
-  distance:
-    Priority: 0
-    Open: true
-    Debug: false
-    Strategy: 1
-    Method: 0
+Redis:
+  Enabled: true
+  Addr: 127.0.0.1:6379
+  Prefix: distance_matrix
+  EdgeTTL: 1209600
+Engine:
+  DefaultGeoWideM: 200
+  MaxPoints: 100
+  TenantQPS: 50
+Providers:
+  amap:
+    Enabled: true
+    Keys: 9e12a1bc441fef432e9e461632746ba2,c70e3ecbb3a1a7247fa01885c9b9187c,4396fb03833e27e6438dde36c7457cf3
+    BaseURL: http://restapi.amap.com
+    BatchSize: 12
+    TimeoutSec: 2
+    KeyRecoverySec: 300
+    KeyProbeSec: 30
+    # ADCS — tuned via: go run ./scripts/simulate_key_pool.go -live
+    KeyConfidenceTau: 2.0      # τ scan winner ~2.0 for Amap key pool
+    KeyBetaPriorA: 2           # ρ₀ = 2/3 optimistic
+    KeyBetaPriorB: 1
+    KeyFailureSoftWeight: 0.3   # η = S + 0.3F
+    KeyEpsilonScale: 4         # ε = e^{-N/4} single-key survival
+    KeyMinProbeRate: 0.02

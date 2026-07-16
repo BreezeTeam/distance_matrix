@@ -1,76 +1,98 @@
 # distance_matrix
-Distance Matrix service based on golang and zeromicro
 
-# 地理信息寻址服务
+Enterprise OD distance/time matrix service — **cache-first**, **multi-tenant**, **Amap-backed**, built for VRP and dispatch at scale.
 
-go env 设置 go env -w GOPROXY=https://goproxy.cn/,direct
+> Approximation-aware: falls back to haversine when provider fails. Monitor metrics, not response flags.
 
-# go mod
+## Documentation
 
-go mod init polaris-matrix
+| Doc | Content |
+|-----|---------|
+| [**Docs index**](./docs/README.md) | Full documentation hub |
+| [API Reference](./docs/api-reference.md) | Endpoints, errors, headers |
+| [OpenAPI](./docs/openapi.yaml) | Swagger / codegen |
+| [Architecture](./docs/architecture.md) | Cache model, data flow |
+| [Configuration](./docs/configuration.md) | `matrix.yaml` |
+| [Operations](./docs/operations.md) | Deploy, metrics, capacity |
+| [Testing](./docs/testing.md) | Unit, e2e, live |
+| [User Stories](./docs/user-stories.md) | E2E acceptance criteria |
+| [Key pool scheduler](./docs/key-pool-algorithm.md) | Multi-key routing formula and tuning |
+| [Design](./docs/design/README.md) | v2 spec and completion plan |
 
-# install go-zero
+## Quick start
 
-go get -u github.com/zeromicro/go-zero go get -u github.com/zeromicro/go-zero/tools/goctl
-
-# 代码生成
-
-goctl api go -api common/service.api -dir .
-
-# 安装依赖
-
-go mod tidy
-
-# 基本结构更改
-
-添加配置到config 结构体中,这样就可以在上下文中获取到sdk配置，并实现sdk的自动注册和配置
-
-```go
-package config
-
-import (
-	"github.com/zeromicro/go-zero/rest"
-	"polaris-matrix/common"
-)
-
-type Config struct {
-	common.ServiceConfig
-	rest.RestConf
-}
-
-```
-
-# 启动
-
+```bash
+docker compose up -d redis
 go run matrix.go -f etc/matrix.yaml
-
-# 可以根据 api 文件生成前端需要的 Java, TypeScript, Dart, JavaScript 代码
-
-goctl api java -api greet.api -dir greet
-
-# swagger doc
-
-go get github.com/zeromicro/goctl-swagger 
-
-goctl api plugin -plugin goctl-swagger="swagger -filename openapi.json" -api common/service.api -dir .
-
-# serve swagger
-swagger_windows_amd64.exe serve -F=swagger openapi.json --port 8888 --host 0.0.0.0
-
-
-# 部署
-`docker build -t registry.ztosys.com/lzxt/matrix:v0.0.3 . `
-`docker login https://registry.ztosys.com/harbor`
-`docker push registry.ztosys.com/lzxt/matrix:v0.0.3`
-
-
-```curl
-
-curl -X POST --location "http://pro-quantum-matrix:8888/api/route"  -H "Content-Type: application/json"  -d "{ \"coordinate\":\"gcj02\", \"points\":[ [116.223, 39.9057], [116.1747, 39.9437], [116.223, 39.9057], [116.1747, 39.9437] ] }"
+curl -s http://localhost:8888/health/ready
 ```
 
+```bash
+curl -X POST http://localhost:8888/v1/matrix \
+  -H "Content-Type: application/json" \
+  -H "X-Tenant-Id: default" \
+  -d '{"points":[[116.40,39.90],[116.41,39.91]],"coordinate":"gcj02"}'
+```
 
-## TODO
-1. graphQL 按需请求
-2. 接入kv/高速缓存
-3. 存储历史请求，按照time slot 存储和管理历史数据
+## API summary
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/v1/matrix` | N×N distance/duration matrices |
+| POST | `/v1/route` | Multi-waypoint route + steps |
+| GET | `/v1/providers` | Enabled providers |
+| GET | `/health/live` | Liveness |
+| GET | `/health/ready` | Readiness |
+
+Manual requests: [`test/api.http`](./test/api.http)
+
+## Project layout
+
+```
+matrix.go                 # entrypoint
+etc/matrix.yaml           # runtime config
+api/service.api           # goctl HTTP contract
+docs/                     # documentation hub
+  design/                 # v2 spec, completion plan
+  key-pool-algorithm.md   # multi-key scheduler
+internal/
+  handler/  engine/  cache/  planner/  provider/
+  loadbalance/  geo/  config/  middleware/  metrics/
+test/
+  api.http                # REST Client scenarios
+  e2e/                    # HTTP + user story tests
+scripts/
+  verify_amap_keys.sh     # key health
+  simulate_key_pool.go    # key pool simulation
+  load_matrix.sh          # load smoke
+```
+
+## Testing
+
+```bash
+go test ./...                              # unit + integration
+go test ./test/e2e/ -v                     # HTTP e2e + user stories
+go test ./test/e2e/ -tags=e2e -run TestLive -v   # live Amap (opt-in)
+bash scripts/verify_amap_keys.sh
+```
+
+**18 e2e tests** including 10 user-story acceptance tests (`TestStory01`–`TestStory10`).
+
+## Architecture
+
+```
+HTTP → MatrixEngine → EdgeCache (Redis)
+                    → RoutePlanner → AmapProvider (multi-key pool)
+```
+
+## Deploy
+
+```bash
+docker compose up --build
+```
+
+See [Operations](./docs/operations.md) for health checks, Prometheus metrics, and capacity planning.
+
+## License
+
+See [LICENSE](./LICENSE).

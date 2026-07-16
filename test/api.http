@@ -1,0 +1,191 @@
+@baseUrl = http://localhost:8888
+@tenant = default
+
+### ─── Health ─────────────────────────────────────────
+
+GET {{baseUrl}}/health/live
+
+###
+
+GET {{baseUrl}}/health/ready
+
+### ─── Providers ────────────────────────────────────────
+
+GET {{baseUrl}}/v1/providers
+
+### ─── Matrix: basic 2-point ────────────────────────────
+
+POST {{baseUrl}}/v1/matrix
+Content-Type: application/json
+X-Tenant-Id: {{tenant}}
+
+{
+  "points": [[116.40, 39.90], [116.41, 39.91]],
+  "coordinate": "gcj02"
+}
+
+### ─── Matrix: 5-point VRP batch ────────────────────────
+
+POST {{baseUrl}}/v1/matrix
+Content-Type: application/json
+X-Tenant-Id: vrp-demo
+
+{
+  "points": [
+    [116.397428, 39.90923],
+    [116.407428, 39.91923],
+    [116.417428, 39.92923],
+    [116.427428, 39.93923],
+    [116.437428, 39.94923]
+  ],
+  "coordinate": "gcj02",
+  "strict": false,
+  "geo_wide_m": 200
+}
+
+### ─── Matrix: strict mode (exact geohash) ──────────────
+
+POST {{baseUrl}}/v1/matrix
+Content-Type: application/json
+X-Tenant-Id: strict-demo
+
+{
+  "points": [[116.40, 39.90], [116.41, 39.91]],
+  "coordinate": "gcj02",
+  "strict": true
+}
+
+### ─── Matrix: method isolation (car vs truck) ──────────
+
+POST {{baseUrl}}/v1/matrix
+Content-Type: application/json
+X-Tenant-Id: fleet-a
+
+{
+  "points": [[116.50, 39.80], [116.51, 39.81]],
+  "method": 0,
+  "coordinate": "gcj02"
+}
+
+###
+
+POST {{baseUrl}}/v1/matrix
+Content-Type: application/json
+X-Tenant-Id: fleet-a
+
+{
+  "points": [[116.50, 39.80], [116.51, 39.81]],
+  "method": 1,
+  "coordinate": "gcj02"
+}
+
+### ─── Matrix: WGS84 input ──────────────────────────────
+
+POST {{baseUrl}}/v1/matrix
+Content-Type: application/json
+
+{
+  "points": [[116.393, 39.907], [116.403, 39.917]],
+  "coordinate": "wgs84"
+}
+
+### ─── Matrix: cache retry (run twice) ──────────────────
+
+POST {{baseUrl}}/v1/matrix
+Content-Type: application/json
+X-Tenant-Id: cache-test
+
+{
+  "points": [[116.60, 39.70], [116.61, 39.71]],
+  "strict": true,
+  "coordinate": "gcj02"
+}
+
+### ─── Matrix: tenant B (isolated namespace) ────────────
+
+POST {{baseUrl}}/v1/matrix
+Content-Type: application/json
+X-Tenant-Id: tenant-b
+
+{
+  "points": [[116.60, 39.70], [116.61, 39.71]],
+  "strict": true,
+  "coordinate": "gcj02"
+}
+
+### ─── Matrix: driving strategy (shortest) ──────────────
+
+POST {{baseUrl}}/v1/matrix
+Content-Type: application/json
+
+{
+  "points": [[116.40, 39.90], [116.41, 39.91]],
+  "strategy": 12,
+  "coordinate": "gcj02"
+}
+
+### ─── Route: 4-waypoint chain ──────────────────────────
+
+POST {{baseUrl}}/v1/route
+Content-Type: application/json
+
+{
+  "points": [
+    [116.40, 39.90],
+    [116.41, 39.91],
+    [116.42, 39.92],
+    [116.43, 39.93]
+  ],
+  "coordinate": "gcj02"
+}
+
+### ─── Route: with tenant header ────────────────────────
+
+POST {{baseUrl}}/v1/route
+Content-Type: application/json
+X-Tenant-Id: route-tenant
+
+{
+  "points": [[116.40, 39.90], [116.41, 39.91], [116.42, 39.92]],
+  "coordinate": "gcj02"
+}
+
+### ─── Errors: invalid point ────────────────────────────
+
+POST {{baseUrl}}/v1/matrix
+Content-Type: application/json
+
+{
+  "points": [[116.40]]
+}
+
+### ─── Errors: too few points ───────────────────────────
+
+POST {{baseUrl}}/v1/matrix
+Content-Type: application/json
+
+{
+  "points": [[116.40, 39.90]]
+}
+
+### ─── Errors: unknown provider ─────────────────────────
+
+POST {{baseUrl}}/v1/matrix
+Content-Type: application/json
+
+{
+  "points": [[116.40, 39.90], [116.41, 39.91]],
+  "provider": "nonexistent"
+}
+
+### ─── Errors: rate limit (burst quickly in script) ─────
+# Run 60+ requests within 1s with same X-Tenant-Id to trigger 429
+
+POST {{baseUrl}}/v1/matrix
+Content-Type: application/json
+X-Tenant-Id: rate-limit-test
+
+{
+  "points": [[116.40, 39.90], [116.41, 39.91]],
+  "coordinate": "gcj02"
+}

@@ -1,0 +1,270 @@
+openapi: 3.0.3
+info:
+  title: Distance Matrix API
+  description: Enterprise OD distance/time matrix service
+  version: v1
+servers:
+  - url: http://localhost:8888
+    description: Local default
+
+tags:
+  - name: matrix
+  - name: route
+  - name: providers
+  - name: health
+
+paths:
+  /v1/matrix:
+    post:
+      tags: [matrix]
+      summary: Compute OD distance/duration matrices
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MatrixRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatrixResponse'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: 429
+                msg: RATE_LIMIT
+        '504':
+          description: Deadline exceeded (retry recommended)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: 504
+                msg: MATRIX_DEADLINE
+
+  /v1/route:
+    post:
+      tags: [route]
+      summary: Multi-waypoint route with steps
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RouteRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RouteResponse'
+
+  /v1/providers:
+    get:
+      tags: [providers]
+      summary: List enabled routing providers
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProvidersResponse'
+
+  /health/live:
+    get:
+      tags: [health]
+      summary: Liveness probe
+      responses:
+        '200':
+          description: Alive
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: ok
+
+  /health/ready:
+    get:
+      tags: [health]
+      summary: Readiness probe
+      responses:
+        '200':
+          description: Ready
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: ready
+        '503':
+          description: Not ready
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: not ready
+
+components:
+  parameters:
+    TenantId:
+      name: X-Tenant-Id
+      in: header
+      required: false
+      schema:
+        type: string
+        default: default
+
+  schemas:
+    Point:
+      type: array
+      minItems: 2
+      maxItems: 2
+      items:
+        type: number
+        format: float
+      example: [116.40, 39.90]
+
+    MatrixRequest:
+      type: object
+      required: [points]
+      properties:
+        points:
+          type: array
+          minItems: 2
+          items:
+            $ref: '#/components/schemas/Point'
+        coordinate:
+          type: string
+          enum: [gcj02, wgs84]
+          default: gcj02
+        strategy:
+          type: integer
+          default: 0
+        method:
+          type: integer
+          default: 0
+        timeslot:
+          type: string
+        strict:
+          type: boolean
+          default: false
+        geo_wide_m:
+          type: integer
+          default: 200
+        provider:
+          type: string
+          default: amap
+        speed_mps:
+          type: integer
+          default: 0
+
+    MatrixData:
+      type: object
+      properties:
+        distances:
+          type: array
+          items:
+            type: array
+            items:
+              type: number
+        durations:
+          type: array
+          items:
+            type: array
+            items:
+              type: number
+
+    MatrixResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        msg:
+          type: string
+        data:
+          $ref: '#/components/schemas/MatrixData'
+
+    RouteRequest:
+      type: object
+      required: [points]
+      properties:
+        points:
+          type: array
+          minItems: 2
+          items:
+            $ref: '#/components/schemas/Point'
+        coordinate:
+          type: string
+        strategy:
+          type: integer
+        method:
+          type: integer
+        provider:
+          type: string
+        speed_mps:
+          type: integer
+
+    RouteStep:
+      type: object
+      properties:
+        origin:
+          $ref: '#/components/schemas/Point'
+        destination:
+          $ref: '#/components/schemas/Point'
+        distance:
+          type: number
+        duration:
+          type: number
+
+    RouteData:
+      type: object
+      properties:
+        distance:
+          type: number
+        duration:
+          type: number
+        steps:
+          type: array
+          items:
+            $ref: '#/components/schemas/RouteStep'
+
+    RouteResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        msg:
+          type: string
+        data:
+          $ref: '#/components/schemas/RouteData'
+
+    ProvidersResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        msg:
+          type: string
+        data:
+          type: array
+          items:
+            type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        msg:
+          type: string
