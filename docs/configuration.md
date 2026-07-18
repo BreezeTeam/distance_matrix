@@ -60,7 +60,7 @@ Do not hand-write CREATE TABLE. Compose can still mount generated `scripts/ddl/`
 | `Enabled` | `true` | Register provider |
 | `Keys` | — | Comma-separated API keys |
 | `BaseURL` | `http://restapi.amap.com` | API base |
-| `BatchSize` | `12` | Max waypoints / request |
+| `BatchSize` | `12` | Max waypoints / request; Dense planner uses `L = BatchSize - 1` legs |
 | `TimeoutSec` | `2` | HTTP timeout |
 | `KeyRecoverySec` | `300` | Outcome decay half-life |
 | `KeyProbeSec` | `30` | Dead-key probe base T₀ |

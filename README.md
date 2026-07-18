@@ -1,8 +1,25 @@
 # distance_matrix
 
-Enterprise OD distance/time matrix — cache-first, multi-tenant, Amap-backed — for VRP and dispatch.
+[English](./README.md) | [中文](./README.zh-CN.md)
 
-Falls back to haversine when the provider fails. Watch metrics (`fallback` / provider calls), not response flags.
+Enterprise **OD distance/time matrix** for VRP, dispatch, and route optimization — cache-first, multi-tenant, Amap-backed, synchronous HTTP N×N.
+
+Most matrix clients burn quota one OD at a time and restart from scratch on timeout. This service caches directed edges, packs misses with Dense Arc Cover, and write-throughs progress so retries finish cheaper and faster.
+
+## Why this
+
+| Highlight | What you get |
+|-----------|----------------|
+| **Edge cache, not matrix cache** | Redis stores directed OD edges; reuse across requests in your tenant namespace |
+| **Dense Arc Cover** | Miss edges planned into continuous walks (≤ L legs) so one provider call covers many pairs |
+| **Write-through + resumable 504** | On deadline: `MATRIX_DEADLINE` with edges already in Redis; retry the same request and continue |
+| **Fuzzy or strict lookup** | Near-neighbor GEO + reverse reuse when `strict=false`; exact geohash when you need determinism |
+| **Tenant / method / strategy isolation** | Car vs truck (and customers) never share cache keys |
+| **Multi-key ADCS pool** | Adaptive Amap key selection with soft-failure weighting and dead-key probe backoff |
+| **Optional MySQL L2** | Redis stays on the hot path; cold archive is opt-in via DSN |
+| **Observable degrade** | Haversine fallback on provider failure; watch `fallback` / `provider_calls` metrics — no junk fields in the API body |
+
+Built for scheduling platforms, VRP solvers, and teams that need road-network matrices with controllable cost and hard multi-tenant boundaries.
 
 ## Documentation
 
@@ -12,6 +29,7 @@ Falls back to haversine when the provider fails. Watch metrics (`fallback` / pro
 | [API](./docs/api-reference.md) | Endpoints, errors |
 | [OpenAPI](./docs/openapi.yaml) | Spec |
 | [Architecture](./docs/architecture.md) | Cache + L2 + planner |
+| [Dense planner](./docs/design/dense-arc-cover-algorithm.md) | Miss-edge packing algorithm |
 | [Configuration](./docs/configuration.md) | `matrix.yaml` |
 | [Operations](./docs/operations.md) | Deploy, metrics |
 | [Key pool](./docs/key-pool-algorithm.md) | Multi-key ADCS |

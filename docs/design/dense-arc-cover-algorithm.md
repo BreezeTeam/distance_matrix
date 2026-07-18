@@ -8,13 +8,15 @@
 
 ## 1. Problem
 
-Cover directed OD edges missing from Redis while minimizing provider calls (each walk ≤ `L` legs, default 17).
+Cover directed OD edges missing from Redis while minimizing provider calls (each walk ≤ `L` legs).
 
 Lexicographic objective: calls → bridges → duplicates.
 
+In the engine, `L = Providers.amap.BatchSize - 1` (default BatchSize 12 → **L = 11**). Package `Config.MaxLegs` (default 17) is only a fallback when the caller does not pass `maxLegs`.
+
 ---
 
-## 2. Dense algorithm (two clean phases)
+## 2. Dense algorithm (two phases)
 
 ```text
 DensePlan
@@ -24,6 +26,7 @@ DensePlan
 
 - Deterministic: same input + config → same output
 - Entry: `NewDensePlanner(DefaultConfig()).Plan(...)`
+- Wired from `internal/engine` after Redis (and optional MySQL L2) miss probe
 
 ---
 
@@ -35,8 +38,11 @@ DensePlan
 | `dense.go` | `DenseRouteFirst` / `DensePlan` |
 | `packing.go` | `PackFragments` |
 | `graph.go` | mutable graph + successor selection |
+| `types.go` | `Arc` / `Plan` / `Config` / interface |
+| `required_set.go` | required-edge normalization / sets |
 | `lower_bound.go` / `trail.go` | combo LB / τ |
 | `validate.go` | validation and completion |
+| `util.go` | small helpers |
 | `scenario.go` | test scenario generation |
 
 ---
@@ -45,7 +51,7 @@ DensePlan
 
 ```go
 type Config struct {
-    MaxLegs              int // default 17
+    MaxLegs              int // default 17 (engine usually overrides via BatchSize-1)
     DenseCandidateWindow int // default 8
 }
 ```

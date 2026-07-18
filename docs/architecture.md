@@ -50,7 +50,7 @@ Client (VRP / optimizer)
 
 1. Convert coordinates to GCJ-02  
 2. Probe Redis (then MySQL L2 if configured) for every OD  
-3. Plan residual misses with **DensePlanner** (`internal/arccover`)  
+3. Plan residual misses with **DensePlanner** (`internal/arccover`, `L = BatchSize - 1`)  
 4. Execute planned walks via provider batch; write-through hits  
 5. Fill remaining cells (pair route / reverse / fallback)  
 6. Return distance + duration matrices  

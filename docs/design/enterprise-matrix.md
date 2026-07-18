@@ -70,7 +70,7 @@ Write: Redis pipeline; async MySQL upsert. DDL: `scripts/ddl/`.
 
 ## 6. Planner / Provider
 
-- DensePlanner plans walks ≤ L legs  
+- DensePlanner plans walks ≤ L legs (`L = BatchSize - 1`, default 11)  
 - RoutePlanner executes batches (default 12 waypoints)  
 - Amap multi-key ADCS — see [key-pool-algorithm](../key-pool-algorithm.md)  
 - Fallback haversine × 1.5 (provider hardcoded)
@@ -100,4 +100,4 @@ Logs: tenant, n, cache_hit, fallback, provider_calls, elapsed_ms.
 
 ## References
 
-[Architecture](../architecture.md) · [Key pool](../key-pool-algorithm.md) · [Dense](./hybrid-arc-cover-algorithm.md) · `scripts/ddl/`
+[Architecture](../architecture.md) · [Key pool](../key-pool-algorithm.md) · [Dense](./dense-arc-cover-algorithm.md) · `scripts/ddl/`
