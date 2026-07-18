@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"distance-matrix/internal/cache"
+	"distance-matrix/internal/persist"
 	"distance-matrix/internal/planner"
 	"distance-matrix/internal/provider"
 	"distance-matrix/internal/testutil"
@@ -68,6 +69,55 @@ func TestEngineCacheHitSkipsProvider(t *testing.T) {
 	}
 	if res.Stats.CacheHits == 0 {
 		t.Fatalf("expected cache hits, stats=%+v", res.Stats)
+	}
+}
+
+func TestEngineColdArchiveHitPromotesToRedis(t *testing.T) {
+	_, store := testutil.SetupRedis(t)
+	mem := persist.NewMemory()
+	o := [2]float32{116.40, 39.90}
+	d := [2]float32{116.41, 39.91}
+	wmt := cache.TimeSlotWMH(time.Now())
+	opts := cache.LookupOpts{Tenant: "cold", Method: 0, Strategy: 0, TimeSlot: wmt, Strict: true}
+	if err := mem.Upsert(context.Background(), opts, cache.Edge{
+		Origin: o, Destination: d, DistanceM: 4242, DurationS: 242, WMT: wmt, Provider: "amap",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	// reverse for bidirectional probe in non-strict; use strict to keep one-way
+	if err := mem.Upsert(context.Background(), opts, cache.Edge{
+		Origin: d, Destination: o, DistanceM: 4242, DurationS: 242, WMT: wmt, Provider: "amap",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	stub := &testutil.StubProvider{}
+	eng := newTestEngine(testutil.NewRegistry(stub), store, 0)
+	eng.Archive = mem
+
+	res, err := eng.Compute(context.Background(), Request{
+		Points:     [][2]float32{o, d},
+		Coordinate: "gcj02",
+		Tenant:     "cold",
+		TimeSlot:   wmt,
+		Strict:     true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Distances[0][1] != 4242 {
+		t.Fatalf("expected cold archive value, got %v", res.Distances[0][1])
+	}
+	if res.Stats.ColdHits == 0 {
+		t.Fatalf("expected cold hits, stats=%+v", res.Stats)
+	}
+	if stub.Calls.Load() != 0 {
+		t.Fatalf("provider should not be called on cold hit, calls=%d", stub.Calls.Load())
+	}
+	// Promoted to Redis L1
+	got, err := store.Get(context.Background(), opts, o, d)
+	if err != nil || !got.Hit {
+		t.Fatalf("expected promotion to redis, hit=%v err=%v", got.Hit, err)
 	}
 }
 

@@ -17,6 +17,13 @@ Redis:
   Addr: 127.0.0.1:6379
   Prefix: distance_matrix
   EdgeTTL: 1209600
+# Persistence: uncomment DSN to enable MySQL L2. Prefer offline DDL (genddl) or AutoMigrate=true.
+Persistence:
+  # DSN: "matrix:matrix@tcp(127.0.0.1:3306)/distance_matrix?parseTime=true&charset=utf8mb4"
+  Database: distance_matrix
+  AutoMigrate: false
+  MaxOpenConns: 10
+  AsyncQueue: 1024
 Engine:
   DefaultGeoWideM: 200
   MaxPoints: 100
@@ -30,10 +37,9 @@ Providers:
     TimeoutSec: 2
     KeyRecoverySec: 300
     KeyProbeSec: 30
-    # ADCS — tuned via: go run ./scripts/simulate_key_pool.go -live
-    KeyConfidenceTau: 2.0      # τ scan winner ~2.0 for Amap key pool
-    KeyBetaPriorA: 2           # ρ₀ = 2/3 optimistic
+    KeyConfidenceTau: 2.0
+    KeyBetaPriorA: 2
     KeyBetaPriorB: 1
-    KeyFailureSoftWeight: 0.3   # η = S + 0.3F
-    KeyEpsilonScale: 4         # ε = e^{-N/4} single-key survival
+    KeyFailureSoftWeight: 0.3
+    KeyEpsilonScale: 4
     KeyMinProbeRate: 0.02

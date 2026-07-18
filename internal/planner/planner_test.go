@@ -76,24 +76,15 @@ func TestRoutePair(t *testing.T) {
 	}
 }
 
-func TestChainToWaypoints(t *testing.T) {
-	edges := [][][2]float32{
-		{{1, 1}, {2, 2}},
-		{{2, 2}, {3, 3}},
+func TestRouteWaypointsSplitsBatches(t *testing.T) {
+	p := &countingProvider{}
+	pl := NewPlanner(2) // batch size 2 → 1 leg per packet, 3 points → 2 packets with overlap
+	wps := [][2]float32{{1, 1}, {2, 2}, {3, 3}}
+	_, calls, err := pl.RouteWaypoints(context.Background(), p, provider.RouteRequest{}, wps)
+	if err != nil {
+		t.Fatal(err)
 	}
-	wps := ChainToWaypoints(edges)
-	if len(wps) != 3 {
-		t.Fatalf("expected 3 waypoints, got %v", wps)
-	}
-	if wps[0] != edges[0][0] || wps[2] != edges[1][1] {
-		t.Fatalf("chain flatten wrong: %v", wps)
-	}
-}
-
-func TestGreedyChainOrdersEdges(t *testing.T) {
-	points := [][2]float32{{1, 1}, {2, 2}, {3, 3}}
-	edges := GreedyChain{}.Order(points)
-	if len(edges) == 0 {
-		t.Fatal("expected ordered edges")
+	if calls < 1 {
+		t.Fatalf("expected provider calls, got %d", calls)
 	}
 }

@@ -1,6 +1,6 @@
 # Distance Matrix — Documentation
 
-Enterprise OD distance/time matrix service for VRP, dispatch, and route optimization.
+Enterprise OD distance/time matrix for VRP, dispatch, and route optimization.
 
 ## Guides
 
@@ -8,34 +8,29 @@ Enterprise OD distance/time matrix service for VRP, dispatch, and route optimiza
 |----------|-------------|
 | [API Reference](./api-reference.md) | Endpoints, request/response, errors |
 | [OpenAPI](./openapi.yaml) | Machine-readable API spec |
-| [Architecture](./architecture.md) | Components, data flow, cache model |
+| [Architecture](./architecture.md) | Components, cache, L2 archive |
 | [Configuration](./configuration.md) | `matrix.yaml` reference |
-| [Operations](./operations.md) | Deploy, health, metrics, capacity |
-| [Testing](./testing.md) | Unit, e2e, live, manual HTTP |
+| [Operations](./operations.md) | Deploy, health, metrics |
+| [Testing](./testing.md) | Unit, e2e, live |
 | [User Stories](./user-stories.md) | E2E acceptance scenarios |
-
-## Design
-
-| Document | Description |
-|----------|-------------|
-| [Design index](./design/README.md) | Architecture specs and plans |
-| [Enterprise Matrix v2](./design/enterprise-matrix-v2.md) | Full v2 design spec |
-| [Key pool scheduler](./key-pool-algorithm.md) | Multi-key routing formula and tuning |
+| [Key pool scheduler](./key-pool-algorithm.md) | Multi-key ADCS |
+| [Design index](./design/README.md) | Specs and Dense planner |
 
 ## What this service does
 
-- Computes **N×N distance and duration matrices** synchronously over HTTP
-- Caches **directed edges** in Redis (not full matrices) with tenant/method/strategy isolation
-- Chains provider calls to amortize Amap quota
-- Falls back to **haversine × factor** when provider fails (approximation — see ops doc)
-- Supports **504 partial progress** with write-through cache for fast retry
+- Synchronous **N×N distance / duration** matrices over HTTP  
+- **Edge cache** in Redis (tenant / method / strategy isolation)  
+- Optional **MySQL L2** archive when `Persistence.DSN` is set  
+- Dense miss planning to amortize provider quota  
+- Haversine fallback when provider fails (see ops)  
+- **504 + write-through** so retries reuse partial progress  
 
 ## Quick start
 
 ```bash
-docker compose up -d redis
+docker compose up -d redis          # + mysql if you enable Persistence.DSN
 go run matrix.go -f etc/matrix.yaml
 curl -s http://localhost:8888/health/ready
 ```
 
-See [root README](../README.md) for build and test commands.
+See [root README](../README.md) for build and tests.

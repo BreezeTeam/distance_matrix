@@ -1,97 +1,102 @@
 # distance_matrix
 
-Enterprise OD distance/time matrix service — **cache-first**, **multi-tenant**, **Amap-backed**, built for VRP and dispatch at scale.
+Enterprise OD distance/time matrix — cache-first, multi-tenant, Amap-backed — for VRP and dispatch.
 
-> Approximation-aware: falls back to haversine when provider fails. Monitor metrics, not response flags.
+Falls back to haversine when the provider fails. Watch metrics (`fallback` / provider calls), not response flags.
 
 ## Documentation
 
 | Doc | Content |
 |-----|---------|
-| [**Docs index**](./docs/README.md) | Full documentation hub |
-| [API Reference](./docs/api-reference.md) | Endpoints, errors, headers |
-| [OpenAPI](./docs/openapi.yaml) | Swagger / codegen |
-| [Architecture](./docs/architecture.md) | Cache model, data flow |
+| [Docs index](./docs/README.md) | Full hub |
+| [API](./docs/api-reference.md) | Endpoints, errors |
+| [OpenAPI](./docs/openapi.yaml) | Spec |
+| [Architecture](./docs/architecture.md) | Cache + L2 + planner |
 | [Configuration](./docs/configuration.md) | `matrix.yaml` |
-| [Operations](./docs/operations.md) | Deploy, metrics, capacity |
-| [Testing](./docs/testing.md) | Unit, e2e, live |
-| [User Stories](./docs/user-stories.md) | E2E acceptance criteria |
-| [Key pool scheduler](./docs/key-pool-algorithm.md) | Multi-key routing formula and tuning |
-| [Design](./docs/design/README.md) | v2 spec and completion plan |
+| [Operations](./docs/operations.md) | Deploy, metrics |
+| [Key pool](./docs/key-pool-algorithm.md) | Multi-key ADCS |
+| [Design](./docs/design/README.md) | Specs |
 
-## Quick start
+## Quick start (Docker)
 
 ```bash
-docker compose up -d redis
-go run matrix.go -f etc/matrix.yaml
-curl -s http://localhost:8888/health/ready
+docker compose -f docker-compose.dev.yml up -d --build
+curl -s http://127.0.0.1:8888/health/ready
 ```
 
+Stack: `distance_matrix_app` (:8888), Redis (:6379), MySQL (:3306).  
+App config inside Compose: [`etc/matrix.docker.yaml`](./etc/matrix.docker.yaml) (`redis` / `mysql` hostnames).
+
 ```bash
-curl -X POST http://localhost:8888/v1/matrix \
+curl -X POST http://127.0.0.1:8888/v1/matrix \
   -H "Content-Type: application/json" \
   -H "X-Tenant-Id: default" \
   -d '{"points":[[116.40,39.90],[116.41,39.91]],"coordinate":"gcj02"}'
 ```
 
-## API summary
+Host-run binary (deps only in Docker):
+
+```bash
+docker compose -f docker-compose.dev.yml up -d redis mysql
+go run matrix.go -f etc/matrix.dev.yaml
+```
+
+## API
 
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/v1/matrix` | N×N distance/duration matrices |
-| POST | `/v1/route` | Multi-waypoint route + steps |
-| GET | `/v1/providers` | Enabled providers |
+| POST | `/v1/matrix` | N×N distance/duration |
+| POST | `/v1/route` | Multi-waypoint route |
+| GET | `/v1/providers` | Providers |
 | GET | `/health/live` | Liveness |
 | GET | `/health/ready` | Readiness |
 
-Manual requests: [`test/api.http`](./test/api.http)
+Timeout → **504** `MATRIX_DEADLINE` (partial write-through). Manual: [`test/api.http`](./test/api.http).
 
-## Project layout
+## Layout
 
 ```
-matrix.go                 # entrypoint
-etc/matrix.yaml           # runtime config
-api/service.api           # goctl HTTP contract
-docs/                     # documentation hub
-  design/                 # v2 spec, completion plan
-  key-pool-algorithm.md   # multi-key scheduler
-internal/
-  handler/  engine/  cache/  planner/  provider/
-  loadbalance/  geo/  config/  middleware/  metrics/
-test/
-  api.http                # REST Client scenarios
-  e2e/                    # HTTP + user story tests
+matrix.go
+etc/matrix.yaml | matrix.dev.yaml | matrix.docker.yaml
+api/service.api
+docs/
 scripts/
-  verify_amap_keys.sh     # key health
-  simulate_key_pool.go    # key pool simulation
-  load_matrix.sh          # load smoke
+  ddl/ genddl/            # MySQL schema from GORM model
+  scenario_cache_matrix.py
+  capacity_timeout_stress.py
+internal/
+  handler/ engine/ cache/ persist/ arccover/
+  planner/ provider/ loadbalance/ geo/
+test/e2e/
 ```
 
 ## Testing
 
 ```bash
-go test ./...                              # unit + integration
-go test ./test/e2e/ -v                     # HTTP e2e + user stories
-go test ./test/e2e/ -tags=e2e -run TestLive -v   # live Amap (opt-in)
-bash scripts/verify_amap_keys.sh
-```
+go test ./...
+go test ./test/e2e/ -v
+go test ./test/e2e/ -tags=e2e -run TestLive -v   # live Amap
 
-**18 e2e tests** including 10 user-story acceptance tests (`TestStory01`–`TestStory10`).
+# Against running Compose stack:
+python3 scripts/scenario_cache_matrix.py
+python3 scripts/capacity_timeout_stress.py
+```
 
 ## Architecture
 
 ```
-HTTP → MatrixEngine → EdgeCache (Redis)
-                    → RoutePlanner → AmapProvider (multi-key pool)
+HTTP → MatrixEngine → Redis (L1) → MySQL L2 (optional)
+                   → DensePlanner → AmapProvider
 ```
 
 ## Deploy
 
 ```bash
-docker compose up --build
+docker compose -f docker-compose.dev.yml up -d --build
+# or: docker compose up --build
 ```
 
-See [Operations](./docs/operations.md) for health checks, Prometheus metrics, and capacity planning.
+DDL: edit `internal/persist/model.go`, then `go run ./scripts/genddl -dsn '...'` (or `AutoMigrate: true`). See [Operations](./docs/operations.md).
 
 ## License
 

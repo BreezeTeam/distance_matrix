@@ -120,7 +120,7 @@ func (s *Store) Get(ctx context.Context, opts LookupOpts, origin, destination [2
 		}
 	}
 
-	// Same geohash cell → zero distance hit (Python semantics).
+	// Same geohash cell → zero-distance hit.
 	if bExact == eExact {
 		return GetResult{
 			Edge: Edge{Origin: origin, Destination: destination, DistanceM: 0, DurationS: 0, WMT: slot},

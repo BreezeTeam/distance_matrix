@@ -247,6 +247,7 @@ func (r amapResponse) toResult(waypoints [][2]float32) *RouteResult {
 	checkPoint := 1
 	for _, k := range path.Steps {
 		cur := 0
+		// Amap returns these Chinese literals for waypoint / destination arrival.
 		if val, ok := k.AssistantAction.(string); ok && geo.In(val, []string{"到达途经地", "到达目的地"}) {
 			cur = 1
 		}

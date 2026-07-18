@@ -2,107 +2,100 @@
 
 ## Deploy
 
-### Docker Compose (recommended for dev/staging)
+### Docker Compose
 
 ```bash
-docker compose up -d redis
-docker compose up --build matrix
-curl http://localhost:8888/health/ready
+# Full local stack (app + Redis + MySQL on :3306)
+docker compose -f docker-compose.dev.yml up -d --build
+curl http://127.0.0.1:8888/health/ready
 ```
+
+| Service | Host port |
+|---------|-----------|
+| matrix | 8888 |
+| redis | 6379 |
+| mysql | 3306 |
+
+First MySQL start applies `scripts/ddl/` via `docker-entrypoint-initdb.d`.  
+In-compose DSN uses hostname `mysql:3306` ([`etc/matrix.docker.yaml`](../etc/matrix.docker.yaml)).
 
 ### Binary
 
 ```bash
+docker compose -f docker-compose.dev.yml up -d redis mysql
 go build -o matrix matrix.go
-./matrix -f etc/matrix.yaml
+./matrix -f etc/matrix.dev.yaml   # DSN → 127.0.0.1:3306
 ```
 
-Requires Redis when `Redis.Enabled: true`.
+Requires Redis when `Redis.Enabled: true`. MySQL only when `Persistence.DSN` is set (table must already exist unless `AutoMigrate: true`).
+
+```bash
+mysql -h 127.0.0.1 -P 3306 -u root -p < scripts/ddl/001_distance_matrix_edge.sql
+```
+
+### Request timeout
+
+YAML `Timeout` is the **business** deadline → HTTP **504** `MATRIX_DEADLINE` with write-through.  
+go-zero Rest `TimeoutHandler` is disabled (`config.ForServer`) so it cannot race with plain **503** `Request Timeout`.
 
 ## Health checks
 
 | Endpoint | Use | Pass |
 |----------|-----|------|
-| `/health/live` | K8s liveness | `200 ok` |
-| `/health/ready` | K8s readiness | `200 ready` |
+| `/health/live` | Liveness | `200 ok` |
+| `/health/ready` | Readiness | `200 ready` |
 
-Readiness fails when:
+Ready fails if Redis is enabled but down, or no Amap keys. MySQL down → archive disabled (log), readiness unaffected.
 
-- Redis enabled but not connected
-- No Amap keys configured
-
-## Prometheus metrics
-
-Namespace `matrix_*` (go-zero metric registry):
+## Prometheus
 
 | Metric | Labels | Meaning |
 |--------|--------|---------|
-| `matrix_api_requests_total` | tenant, status | Request count |
-| `matrix_api_request_duration_ms` | tenant | Latency histogram |
-| `matrix_engine_fallback_edges_total` | tenant | Haversine fallback edges |
-| `matrix_engine_provider_calls_total` | tenant, provider | Provider batch calls |
+| `matrix_api_requests_total` | tenant, status | Requests |
+| `matrix_api_request_duration_ms` | tenant | Latency |
+| `matrix_engine_fallback_edges_total` | tenant | Haversine edges |
+| `matrix_engine_provider_calls_total` | tenant, provider | Provider batches |
 
-Wire scrape config to your Prometheus stack. Alert suggestions:
-
-- `rate(matrix_engine_fallback_edges_total[5m]) / rate(matrix_api_requests_total[5m])` > 0.5 — provider degradation
-- p95 `matrix_api_request_duration_ms` > SLO threshold
+Alert ideas: high fallback ratio; p95 latency vs SLO.
 
 ## Logs
-
-Structured info log per matrix request (internal only):
 
 ```
 matrix tenant=... n=... cache_hit=... fallback=... provider_calls=... elapsed_ms=...
 ```
 
-## Capacity planning
-
-Rule of thumb from design spec:
+## Capacity
 
 ```
-Provider QPS ≈ Client QPS × avg_points × (1 - cache_hit_ratio)
+Provider QPS ≈ Client QPS × avg_points × (1 - effective_hit_ratio)
 ```
 
-Example: 100 QPS × 50 points × 20% miss = **~1,000 provider calls/s** — validate with load test.
-
-Default limits:
-
-- `TenantQPS`: 50 per tenant on matrix
-- `MaxPoints`: 100
-- Amap batch: 12 waypoints per call
-
-### Load smoke
+Limits: `TenantQPS` 50, `MaxPoints` 100, Amap batch 12.
 
 ```bash
 bash scripts/load_matrix.sh
-```
-
-### Key health
-
-```bash
 bash scripts/verify_amap_keys.sh
 go run ./scripts/simulate_key_pool.go
 ```
 
-## Fallback semantics (important)
+## Fallback
 
-When Amap fails (quota, bad key, timeout), the engine returns **200 with approximate distances** (haversine × factor). This keeps optimizers running but **must not be treated as road distance**.
+Provider failure → **200 with haversine×factor**. Not road distance. Watch `matrix_engine_fallback_edges_total`.
 
-Monitor `matrix_engine_fallback_edges_total`. Document this behavior to downstream teams.
+## 504 retry
 
-## 504 retry playbook
-
-1. Client receives `504 MATRIX_DEADLINE`
-2. Wait ≥500ms (avoid thundering herd)
-3. Retry **identical request** (same tenant, points, method, strategy, timeslot)
-4. Partial edges in Redis accelerate completion
+1. Receive `504 MATRIX_DEADLINE`  
+2. Wait ≥500ms  
+3. Retry identical request (tenant, points, method, strategy, timeslot)  
+4. Redis (and L2) edges from the first attempt speed completion  
 
 ## Troubleshooting
 
 | Symptom | Check |
 |---------|-------|
-| All distances ~straight-line | Fallback active — keys, Amap quota, logs |
-| 503 ready | Redis addr, keys in yaml |
-| 429 storm | Raise `TenantQPS` or backoff client |
-| Slow cold matrix | Normal — cache warming; reduce points or raise timeout |
-| One key always fails | Run `verify_amap_keys.sh`, remove dead keys |
+| Distances ~straight-line | Fallback — keys, quota, logs |
+| 503 ready | Redis addr, Amap keys |
+| Archive open failed | DSN, DDL applied, grants (DML only) |
+| 429 | `TenantQPS` / client backoff |
+| Slow cold matrix | Misses — raise timeout or shrink points |
+| One key always fails | `verify_amap_keys.sh`, remove dead keys |

@@ -27,7 +27,7 @@ $$
 
 **Output**: selection rate $R \in [0,1]$ → Smooth WRR weight $W = \text{base} \cdot R \cdot 1000$.
 
-Document layout: **Complete formula** (one-page cheat sheet) → **Walkthrough** (section by section) → simulation & references.
+Document layout: **Complete formula** → **Walkthrough** → simulation.
 
 ---
 
@@ -306,36 +306,6 @@ W = \text{base} \cdot R \cdot 1000
 $$
 
 $\rho_{\min} = 0.02$ — probe floor when gate opens.
-
----
-
-### Code & YAML mapping
-
-| Symbol | Code / YAML | Default | Role |
-|--------|-------------|---------|------|
-| $\pi$ | `priorSuccessRate` | 1.0 | Optimistic shrinkage prior |
-| $a, b$ | `KeyBetaPriorA/B` | 2, 1 | Beta posterior |
-| $w_f$ | `KeyFailureSoftWeight` | 0.3 | Soft failure weight |
-| $\tau$ | `KeyConfidenceTau` | 2.0 | Confidence ramp |
-| $T_0$ | `KeyProbeSec` | 30s | Probe interval base |
-| $\phi$ | `probeFailureScale` | 5.0 | Backoff scale |
-| $\rho_{\min}$ | `KeyMinProbeRate` | 0.02 | Probe floor |
-| $k$ | `KeyEpsilonScale` | 4 | $\varepsilon$ scale |
-| halfLife | `KeyRecoverySec` | 300s | Outcome decay |
-
-`KeyProbeSec = 0` disables time gating (tests).
-
----
-
-### Behavior summary
-
-| Situation | Effective $R$ |
-|-----------|----------------|
-| Unexplored key | $\approx 1.0$ |
-| QPS throttle (~32% success) | $\approx \rho$ after $\alpha$ rises |
-| Dead key just probed | $\approx 0$ (gate closed, probe-only) |
-| Dead key after $T(F_b)$ | $\approx \rho_{\min}$ |
-| Lone key pool | Never fully zero ($\varepsilon$) |
 
 ---
 

@@ -35,6 +35,11 @@ bash scripts/verify_amap_keys.sh
 # Key pool simulation
 go run ./scripts/simulate_key_pool.go
 go run ./scripts/simulate_key_pool.go -live   # calibrate from live good key
+
+# Against Compose stack (app :8888, redis, mysql :3306)
+docker compose -f docker-compose.dev.yml up -d --build
+python3 scripts/scenario_cache_matrix.py
+python3 scripts/capacity_timeout_stress.py
 ```
 
 ## Package coverage
@@ -42,12 +47,14 @@ go run ./scripts/simulate_key_pool.go -live   # calibrate from live good key
 | Package | Focus |
 |---------|-------|
 | `internal/cache` | Tenant/method isolation, fuzzy geo, timeslot |
-| `internal/engine` | Matrix fill, strict/reverse, deadline, write-through |
+| `internal/persist` | Memory archive, async upsert |
+| `internal/engine` | Matrix fill, L1/L2, deadline, write-through |
+| `internal/arccover` | Dense miss planner |
 | `internal/handler` | HTTP codes, 504/429, health |
-| `internal/planner` | Chain, batch waypoints |
+| `internal/planner` | Batch waypoints |
 | `internal/provider` | Amap parsing, key rotation |
 | `internal/loadbalance` | Selection formula, probe backoff |
-| `internal/middleware` | Rate limit buckets |
+| `internal/middleware` | Rate limit |
 | `internal/geo` | GCJ-02 / WGS84, haversine |
 
 ## E2E HTTP tests (`test/e2e/matrix_test.go`)

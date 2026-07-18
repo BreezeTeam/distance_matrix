@@ -70,9 +70,9 @@ func matrixHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		}
 
 		logx.WithContext(r.Context()).Infof(
-			"matrix tenant=%s n=%d cache_hit=%.2f fallback=%d provider_calls=%d elapsed_ms=%d",
-			tenant, len(points), result.Stats.CacheHitRatio, result.Stats.FallbackEdges,
-			result.Stats.ProviderCalls, result.Stats.ElapsedMs,
+			"matrix tenant=%s n=%d cache_hit=%.2f hits=%d misses=%d fallback=%d provider_calls=%d arccover_calls=%d elapsed_ms=%d",
+			tenant, len(points), result.Stats.CacheHitRatio, result.Stats.CacheHits, result.Stats.CacheMisses,
+			result.Stats.FallbackEdges, result.Stats.ProviderCalls, result.Stats.ArcCoverCalls, result.Stats.ElapsedMs,
 		)
 		metrics.RecordMatrix(tenant, "200", result.Stats.ElapsedMs, result.Stats.FallbackEdges, result.Stats.ProviderCalls)
 

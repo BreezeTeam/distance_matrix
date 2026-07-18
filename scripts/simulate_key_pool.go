@@ -30,7 +30,7 @@ const (
 )
 
 var (
-	defaultQPSFail = 0.683 // 2026-07-16 live: 30并发×60 OK=19 QPS=41
+	defaultQPSFail = 0.683 // 2026-07-16 live: 30 concurrent × 60 OK=19 QPS=41
 )
 
 type keyModel struct {
@@ -57,22 +57,22 @@ func main() {
 	if *live {
 		rate, note := probeGoodKeyQPSFail()
 		qpsFail = rate
-		fmt.Println("【实测校准】", note)
-		fmt.Printf("  好 key QPS 失败率 = %.1f%%  (用于场景模拟)\n\n", qpsFail*100)
+		fmt.Println("[live calibration]", note)
+		fmt.Printf("  good-key QPS fail rate = %.1f%%  (used for scenarios)\n\n", qpsFail*100)
 	} else {
-		fmt.Printf("【参数来源】默认 QPS fail=%.1f%%（最近一次 live）；加 -live 重跑\n\n", defaultQPSFail*100)
+		fmt.Printf("[params] default QPS fail=%.1f%% (last live run); pass -live to re-probe\n\n", defaultQPSFail*100)
 	}
 
 	halfLife := 300 * time.Second
 	variants := []variant{
 		{"Old Min Probe", loadbalance.LegacyMinProbePreset()},
 		{"v3 Zeroed", loadbalance.ZeroedPreset()},
-		{"v4 ADCS (推荐)", tunedConfig(qpsFail)},
+		{"v4 ADCS (recommended)", tunedConfig(qpsFail)},
 	}
 
 	fmt.Println("╔══════════════════════════════════════════════════════════════════╗")
-	fmt.Println("║  重跑模拟结果 — 基于真实 key 画像 + 可调 ADCS 参数               ║")
-	fmt.Printf("║  好 key QPS fail=%.1f%%  T₀=%v  half-life=%v  10 QPS/worker      ║\n", qpsFail*100, probeBase, halfLife)
+	fmt.Println("║  Simulation — live key profile + tunable ADCS params             ║")
+	fmt.Printf("║  good-key QPS fail=%.1f%%  T₀=%v  half-life=%v  10 QPS/worker    ║\n", qpsFail*100, probeBase, halfLife)
 	fmt.Println("╚══════════════════════════════════════════════════════════════════╝")
 	fmt.Println()
 
@@ -80,19 +80,19 @@ func main() {
 		fmt.Printf("━━ %s ━━\n", v.name)
 		printScenario2(v, halfLife, qpsFail)
 		printScenario3(v, halfLife, qpsFail)
-		if v.name == "v4 ADCS (推荐)" {
+		if v.name == "v4 ADCS (recommended)" {
 			printSingleKey(v, halfLife, qpsFail)
 		}
 		fmt.Println()
 	}
 
 	if v := tunedConfig(qpsFail); true {
-		fmt.Println("━━ τ 扫描 (v4 preset, 场景2 成功率) ━━")
+		fmt.Println("━━ τ sweep (v4 preset, scenario-2 success rate) ━━")
 		for _, tau := range []float64{0.5, 1, 2, 3, 5} {
 			c := v
 			c.ConfidenceTau = tau
 			ok, _, _, _, _ := runScenario2Once(c, halfLife, qpsFail)
-			fmt.Printf("  τ=%.1f → 成功率 %.1f%%\n", tau, pct(ok, 5000))
+			fmt.Printf("  τ=%.1f → success %.1f%%\n", tau, pct(ok, 5000))
 		}
 	}
 }
@@ -123,9 +123,9 @@ func newSimPool(halfLife time.Duration, cfg loadbalance.SchedulerConfig) (*loadb
 
 func printScenario2(v variant, halfLife time.Duration, qpsFail float64) {
 	ok, fb, keys, pool, clock := runScenario2Once(v.cfg, halfLife, qpsFail)
-	fmt.Println("  场景2: 3 key (1 好 + 2 永久坏) 5000 请求")
-	fmt.Printf("    成功率 %.1f%% | fallback %.1f%%\n", pct(ok, 5000), pct(fb, 5000))
-	fmt.Printf("    好 key 权重 %.1f%% | 坏 key 各 %.1f%% (持续探测)\n",
+	fmt.Println("  scenario 2: 3 keys (1 good + 2 permanently dead), 5000 requests")
+	fmt.Printf("    success %.1f%% | fallback %.1f%%\n", pct(ok, 5000), pct(fb, 5000))
+	fmt.Printf("    good-key share %.1f%% | each dead key %.1f%% (kept probing)\n",
 		share(pool, clock, keyGoodPrefix, 3000),
 		(share(pool, clock, keyDead1, 3000)+share(pool, clock, keyDead2, 3000))/2)
 	_ = keys
@@ -155,7 +155,7 @@ func printScenario3(v variant, halfLife time.Duration, qpsFail float64) {
 		pool.RecordSuccess(keyGoodPrefix)
 	}
 	for i := 0; i < 40; i++ {
-		pool.RecordFailure(keyGoodPrefix) // soft: QPS 类失败，非永久坏 key
+		pool.RecordFailure(keyGoodPrefix) // soft: QPS-class failure, not a permanently dead key
 	}
 	afterBurst := pool.EffectiveRateAfter(keyGoodPrefix, probeBase) * 100
 
@@ -166,10 +166,10 @@ func printScenario3(v variant, halfLife time.Duration, qpsFail float64) {
 	}
 	ok, fb, _ := runTraffic(pool, clock, keys, 20, 200)
 
-	fmt.Println("  场景3: 好 key 连续 40 次失败")
-	fmt.Printf("    失败后 R@30s=%.2f%% | 随后200请求 成功 %.1f%% fallback %.1f%%\n",
+	fmt.Println("  scenario 3: good key fails 40 times in a row")
+	fmt.Printf("    after burst R@30s=%.2f%% | next 200 req success %.1f%% fallback %.1f%%\n",
 		afterBurst, pct(ok, 200), pct(fb, 200))
-	fmt.Printf("    稳态 好 key %.1f%% | 坏 key1 %.1f%% | 坏 key2 %.1f%%\n",
+	fmt.Printf("    steady good %.1f%% | dead1 %.1f%% | dead2 %.1f%%\n",
 		share(pool, clock, keyGoodPrefix, 2000),
 		share(pool, clock, keyDead1, 2000),
 		share(pool, clock, keyDead2, 2000))
@@ -180,8 +180,8 @@ func printSingleKey(v variant, halfLife time.Duration, qpsFail float64) {
 	pool.Add(keyGoodPrefix, 1)
 	keys := []keyModel{{keyGoodPrefix, false, qpsFail}}
 	ok, fb, _ := runTraffic(pool, clock, keys, 50, 5000)
-	fmt.Println("  对照: 仅 1 个好 key")
-	fmt.Printf("    成功率 %.1f%% | fallback %.1f%% (单 key ε=e^{-N/4}≈%.2f)\n",
+	fmt.Println("  control: single good key only")
+	fmt.Printf("    success %.1f%% | fallback %.1f%% (single-key ε=e^{-N/4}≈%.2f)\n",
 		pct(ok, 5000), pct(fb, 5000), mathExp(-1.0/4.0))
 }
 
@@ -291,13 +291,13 @@ func mathExp(x float64) float64 {
 func probeGoodKeyQPSFail() (float64, string) {
 	configPath := "etc/matrix.yaml"
 	if _, err := os.Stat(configPath); err != nil {
-		return defaultQPSFail, "etc/matrix.yaml 不可用，使用默认"
+		return defaultQPSFail, "etc/matrix.yaml unavailable; using default"
 	}
 	text, _ := os.ReadFile(configPath)
 	re := regexp.MustCompile(`Keys:\s*(.+)`)
 	m := re.FindSubmatch(text)
 	if len(m) < 2 {
-		return defaultQPSFail, "未解析 Keys"
+		return defaultQPSFail, "Keys not parsed"
 	}
 	var goodKey string
 	for _, k := range strings.Split(string(m[1]), ",") {
@@ -308,7 +308,7 @@ func probeGoodKeyQPSFail() (float64, string) {
 		}
 	}
 	if goodKey == "" {
-		return defaultQPSFail, "未找到好 key"
+		return defaultQPSFail, "good key not found"
 	}
 
 	const n = 60
@@ -333,7 +333,7 @@ func probeGoodKeyQPSFail() (float64, string) {
 	}
 	wg.Wait()
 	failRate := 1.0 - float64(ok)/float64(n)
-	return failRate, fmt.Sprintf("30 并发 × %d 次  OK=%d QPS类失败=%d", n, ok, qps)
+	return failRate, fmt.Sprintf("30 concurrent × %d calls  OK=%d QPS-class fails=%d", n, ok, qps)
 }
 
 func callAmap(key string) (failed, qpsThrottle bool) {

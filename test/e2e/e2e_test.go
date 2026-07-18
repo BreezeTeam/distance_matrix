@@ -47,8 +47,9 @@ func TestMain(m *testing.M) {
 	cfg.Host = "127.0.0.1"
 	cfg.Port = port
 
-	svcCtx := svc.NewServiceContext(cfg)
-	server := rest.MustNewServer(cfg.RestConf)
+	svcCfg, restConf := config.ForServer(cfg)
+	svcCtx := svc.NewServiceContext(svcCfg)
+	server := rest.MustNewServer(restConf)
 	handler.RegisterHandlers(server, svcCtx)
 
 	done := make(chan struct{})

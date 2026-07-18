@@ -11,55 +11,55 @@ Client (VRP / optimizer)
 └─────────┬─────────┘
           ▼
 ┌───────────────────┐
-│  MatrixEngine     │  fill N×N matrix, orchestrate cache + provider
+│  MatrixEngine     │  probe cache → plan misses → fill N×N
 └─────────┬─────────┘
           │
-    ┌─────┴─────┐
-    ▼           ▼
-┌────────┐  ┌──────────────┐
-│ EdgeCache│  │ RoutePlanner │
-│ (Redis) │  │ chain+batch  │
-└────────┘  └──────┬───────┘
-                   ▼
-            ┌──────────────┐
-            │ AmapProvider │  multi-key pool + fallback
-            └──────────────┘
+    ┌─────┴──────┬──────────────┐
+    ▼            ▼              ▼
+┌────────┐  ┌──────────┐  ┌──────────────┐
+│EdgeCache│  │EdgeArchive│  │ DensePlanner │
+│ (Redis) │  │(MySQL L2) │  │ + batch route│
+└────────┘  └──────────┘  └──────┬───────┘
+     ▲ optional DSN               ▼
+                          ┌──────────────┐
+                          │ AmapProvider │  multi-key pool + fallback
+                          └──────────────┘
 ```
+
+`EdgeArchive` is off unless `Persistence.DSN` is set.
 
 ## Design principles
 
-1. **Cache edges, not matrices** — Each directed segment `(origin → destination)` is stored once and reused across matrix requests.
-2. **Write-through** — Successful provider results are written to Redis immediately; 504 retries benefit from partial progress.
-3. **Approximation is explicit internally** — Haversine fallback is logged and metered; API returns numbers without quality flags (by design).
-4. **Tenant isolation** — Redis keys prefixed `{tenant}:distance_matrix:...`
+1. **Cache edges, not matrices** — directed `(origin → destination)` segments, reused across requests.
+2. **Write-through** — provider successes go to Redis immediately; async MySQL when archive enabled. Supports 504 retry.
+3. **Hot path is Redis** — MySQL is L2 only (miss → cold read → promote). DDL is offline (`scripts/ddl/`).
+4. **Approximation is internal** — haversine fallback is metered; API returns numbers only.
+5. **Tenant / method / strategy isolation** — never cross-read car vs truck.
 
 ## Cache key model
 
 ```
-{tenant}:{prefix}:geo                          GEO index
-{tenant}:{prefix}:edge:{method:strategy}:{bGeo}:{eGeo}   HASH per edge bucket
+{tenant}:{prefix}:geo
+{tenant}:{prefix}:edge:{method:strategy}:{bGeo}:{eGeo}   # HASH, field = WMH timeslot
 ```
 
-Each HASH field is a time slot (`WMH` = weekday+hour). Lookup:
-
-- **Strict**: exact geohash pair + timeslot
-- **Non-strict**: may reuse reverse edge; fuzzy GEO radius (`geo_wide_m`); adjacent timeslots ±1h
-
-**Method** and **strategy** are part of the context key — car vs truck never cross-read.
+- **Strict**: exact geohash + timeslot  
+- **Non-strict**: reverse edge, GEO radius (`geo_wide_m`), timeslot ±1h  
 
 ## Matrix computation flow
 
-1. Convert coordinates to GCJ-02
-2. Greedy **chain** over distinct points → minimize provider calls
-3. For each chain segment: cache lookup → batch route on miss
-4. Fill remaining matrix cells (strict / reverse / per-pair route)
-5. Return matrices + internal stats
+1. Convert coordinates to GCJ-02  
+2. Probe Redis (then MySQL L2 if configured) for every OD  
+3. Plan residual misses with **DensePlanner** (`internal/arccover`)  
+4. Execute planned walks via provider batch; write-through hits  
+5. Fill remaining cells (pair route / reverse / fallback)  
+6. Return distance + duration matrices  
 
 ## Provider layer
 
-- **Registry** — pluggable providers (`amap` today)
-- **Amap** — v3 driving direction, multi-key pool with [Adaptive Decaying Confidence Scheduler](./key-pool-algorithm.md)
-- **Fallback** — haversine distance × `FallbackFactor` (default 1.5), synthetic duration
+- **Registry** — pluggable (`amap` today)  
+- **Amap** — driving direction + [ADCS key pool](./key-pool-algorithm.md)  
+- **Fallback** — haversine × 1.5 (Amap provider)  
 
 ## Packages
 
@@ -67,18 +67,20 @@ Each HASH field is a time slot (`WMH` = weekday+hour). Lookup:
 |---------|------|
 | `internal/handler` | HTTP, metrics, rate limit |
 | `internal/engine` | Matrix orchestration |
-| `internal/cache` | Redis GEO + HASH store |
-| `internal/planner` | Chain ordering, batch routing |
+| `internal/cache` | Redis edge store |
+| `internal/persist` | Optional MySQL L2 archive |
+| `internal/arccover` | Dense miss planner |
+| `internal/planner` | Provider batch / waypoint packs |
 | `internal/provider` | Amap + registry |
-| `internal/loadbalance` | Key selection formula |
+| `internal/loadbalance` | Key selection |
 | `internal/geo` | Coordinates, haversine |
 | `internal/middleware` | Per-tenant QPS |
 
-## What is NOT in scope (v2)
+## Out of scope
 
-- Batch/async matrix API
-- Response `meta` / confidence scores
-- MySQL hot read path
-- Legacy `/api/*` routes (removed)
+- Batch / async matrix API  
+- Response `meta` / confidence scores  
+- MySQL on the hot read path  
+- Legacy `/api/*` routes  
 
-See [design spec](./design/enterprise-matrix-v2.md) for full rationale.
+See [design spec](./design/enterprise-matrix.md).

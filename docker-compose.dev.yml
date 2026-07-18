@@ -1,0 +1,70 @@
+# Local full stack (host-visible ports):
+#
+#   docker compose -f docker-compose.dev.yml up -d --build
+#   curl http://127.0.0.1:8888/health/ready
+#
+# App uses in-compose DNS: redis:6379 / mysql:3306 (see etc/matrix.docker.yaml).
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: distance_matrix_redis
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes", "--save", "60", "1000"]
+    volumes:
+      - distance_matrix_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.0.36
+    container_name: distance_matrix_mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: distance_matrix
+      MYSQL_USER: matrix
+      MYSQL_PASSWORD: matrix
+    volumes:
+      - distance_matrix_mysql_data:/var/lib/mysql
+      - ./scripts/ddl:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  matrix:
+    build: .
+    container_name: distance_matrix_app
+    ports:
+      - "8888:8888"
+    depends_on:
+      redis:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    environment:
+      TZ: Asia/Shanghai
+    command: ["./matrix", "-f", "etc/matrix.docker.yaml"]
+    volumes:
+      - ./etc/matrix.docker.yaml:/app/etc/matrix.docker.yaml:ro
+      - distance_matrix_app_logs:/data/logs
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8888/health/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+volumes:
+  distance_matrix_redis_data:
+  distance_matrix_mysql_data:
+  distance_matrix_app_logs:

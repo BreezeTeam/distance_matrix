@@ -237,10 +237,6 @@ func nextSmoothWeighted(items []*poolItem) *poolItem {
 	return best
 }
 
-type SmoothWeighted = Pool
-
-func (p *Pool) ReduceWeight(item interface{}) { p.RecordFailure(item) }
-
 func (p *Pool) ActiveItems() []interface{} {
 	p.mu.Lock()
 	defer p.mu.Unlock()

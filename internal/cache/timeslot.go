@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// TimeSlotWMH returns weekday + month + hour, matching Python time_slot_wmh.
+// TimeSlotWMH returns weekday + month + hour (e.g. "5071414").
 func TimeSlotWMH(t time.Time) string {
 	if t.IsZero() {
 		t = time.Now()

@@ -1,35 +1,34 @@
 package main
 
 import (
-	"distance-matrix/internal/handler"
-	"distance-matrix/internal/svc"
 	"flag"
 	"fmt"
-	"github.com/zeromicro/go-zero/core/conf"
-	"github.com/zeromicro/go-zero/rest"
 	"runtime"
 
 	"distance-matrix/internal/config"
+	"distance-matrix/internal/handler"
+	"distance-matrix/internal/svc"
+	"github.com/zeromicro/go-zero/core/conf"
+	"github.com/zeromicro/go-zero/rest"
 )
 
-func getGOMAXPROCS() int {
-	runtime.NumCPU()             // 获取机器的CPU核心数
-	return runtime.GOMAXPROCS(0) // 参数为零时用于获取给GOMAXPROCS设置的值
-}
-
-var configFile = flag.String("f", "etc/matrix.yaml", "the config file")
+var configFile = flag.String("f", "etc/matrix.yaml", "config file")
 
 func main() {
-	fmt.Printf("GOMAXPROCS: %d\n", getGOMAXPROCS())
 	flag.Parse()
+	fmt.Printf("GOMAXPROCS: %d\n", runtime.GOMAXPROCS(0))
 
 	var c config.Config
 	conf.MustLoad(*configFile, &c)
 
-	ctx := svc.NewServiceContext(c)
-	server := rest.MustNewServer(c.RestConf)
-	defer server.Stop()
+	// Timeout in yaml is the business deadline (504). Do not pass it to go-zero RestConf,
+	// or TimeoutHandler will win the race with 503 "Request Timeout".
+	svcCfg, restConf := config.ForServer(c)
+	ctx := svc.NewServiceContext(svcCfg)
+	defer ctx.Close()
 
+	server := rest.MustNewServer(restConf)
+	defer server.Stop()
 	handler.RegisterHandlers(server, ctx)
 
 	fmt.Printf("Starting server at %s:%d...\n", c.Host, c.Port)

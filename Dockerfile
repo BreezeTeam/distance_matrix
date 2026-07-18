@@ -9,6 +9,6 @@ RUN go build -o matrix matrix.go
 FROM alpine:3.19
 WORKDIR /app
 COPY --from=build /app/matrix .
-COPY --from=build /app/etc/matrix.yaml ./etc/matrix.yaml
+COPY --from=build /app/etc ./etc
 EXPOSE 8888
-CMD ["./matrix", "-f", "etc/matrix.yaml"]
+CMD ["./matrix", "-f", "etc/matrix.docker.yaml"]

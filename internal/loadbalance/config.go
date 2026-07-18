@@ -13,15 +13,15 @@ type SchedulerConfig struct {
 	ProbeFailureScale float64 // φ in T(F_b)
 	EpsilonScale      float64 // ε = exp(-N/k); k = EpsilonScale (default 4)
 
-	// UseBeta false → legacy ρ = S/(S+F) (or π when empty).
+	// UseBeta false → ρ = S/(S+F) (or π when empty).
 	UseBeta bool
-	// ProbeOnlyHardFail: S=0 and F_hard≥1 → probe-only (R≈0 when gate closed).
+	// ProbeOnlyHardFail: S≈0 and F_hard≥1 → probe-only.
 	ProbeOnlyHardFail bool
-	// MultiKeyEpsilon: when false, ε=0 for N>1 (exploration via g only).
+	// MultiKeyEpsilon: when false, ε=0 for N>1.
 	MultiKeyEpsilon bool
 }
 
-// DefaultSchedulerConfig is tuned for Amap API key pools (QPS throttle + dead keys).
+// DefaultSchedulerConfig is tuned for Amap key pools.
 func DefaultSchedulerConfig() SchedulerConfig {
 	return SchedulerConfig{
 		PriorSuccessRate:  1.0,

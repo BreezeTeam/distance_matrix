@@ -3,14 +3,37 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+  mysql:
+    image: mysql:8.0.36
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: distance_matrix
+      MYSQL_USER: matrix
+      MYSQL_PASSWORD: matrix
+    volumes:
+      - matrix_mysql:/var/lib/mysql
+      - ./scripts/ddl:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
   matrix:
     build: .
     ports:
       - "8888:8888"
     depends_on:
-      - redis
+      redis:
+        condition: service_started
+      mysql:
+        condition: service_healthy
     environment:
       - TZ=Asia/Shanghai
-    command: ["./matrix", "-f", "etc/matrix.yaml"]
+    command: ["./matrix", "-f", "etc/matrix.docker.yaml"]
     volumes:
-      - ./etc/matrix.yaml:/app/etc/matrix.yaml:ro
+      - ./etc/matrix.docker.yaml:/app/etc/matrix.docker.yaml:ro
+
+volumes:
+  matrix_mysql:
